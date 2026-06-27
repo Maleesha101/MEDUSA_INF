@@ -1,32 +1,53 @@
+from __future__ import annotations
 
 import json
-import asyncio
-from fastapi import WebSocket, WebSocketDisconnect
-from ..core import redis_pubsub
+from typing import Dict
 
-# Global set of connected websockets
-connections: set[WebSocket] = set()
-
-async def broadcast(message: dict):
-    data = json.dumps(message)
-    await asyncio.gather(*[ws.send_text(data) for ws in connections])
-
-async def publish_score_update(team_id: str, points: int):
-    await broadcast({"type": "score_update", "team_id": team_id, "points": points})
-
-async def websocket_endpoint(ws: WebSocket):
-    await ws.accept()
-    connections.add(ws)
-    try:
-        # keep alive loop
-        while True:
-            await ws.receive_text()  # we don't expect client messages; just keep alive
-    except WebSocketDisconnect:
-        connections.remove(ws)
-
-# backend/app/ws/__init__.py
-from fastapi import APIRouter, WebSocket
-from .scoreboard import websocket_endpoint
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.endpoints import WebSocketEndpoint
 
 router = APIRouter()
-router.websocket("/ws/scoreboard")(websocket_endpoint)
+
+
+class ConnectionManager:
+    """Tracks active WebSocket connections and broadcasts JSON payloads."""
+    def __init__(self):
+        self.active: set[WebSocket] = set()
+
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self.active.add(ws)
+
+    def disconnect(self, ws: WebSocket):
+        self.active.discard(ws)
+
+    async def broadcast(self, data: Dict):
+        payload = json.dumps(data)
+        for ws in list(self.active):
+            try:
+                await ws.send_text(payload)
+            except WebSocketDisconnect:
+                self.disconnect(ws)
+
+
+manager = ConnectionManager()
+
+
+@router.websocket("/ws/scoreboard")
+class ScoreboardSocket(WebSocketEndpoint):
+    encoding = "json"
+
+    async def on_connect(self, websocket: WebSocket) -> None:
+        await manager.connect(websocket)
+
+    async def on_disconnect(self, websocket: WebSocket, close_code: int) -> None:
+        manager.disconnect(websocket)
+
+    async def on_receive(self, websocket: WebSocket, data: dict) -> None:
+        # The client never sends data; keepalive ping is enough.
+        pass
+
+# Helper for other modules to push an update:
+async def push_scoreboard_update(scoreboard: list[dict]) -> None:
+    """Called after a solve is recorded – pushes the whole leaderboard."""
+    await manager.broadcast({"type": "leaderboard", "data": scoreboard})
