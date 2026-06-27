@@ -1,68 +1,71 @@
-"use client";
-import { useParams } from "next/navigation";
-import useSWR from "swr";
-import { useState } from "react";
-
-type ChallengeDetail = {
-title: string;
-description: string; // markdown
-hints: string[];
-endpoint: string;    // URL to the isolated container
-};
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 export default function ChallengeDetail() {
-const { category, slug } = useParams() as { category: string; slug: string };
-const { data } = useSWR<ChallengeDetail>(`/api/v1/challenges/${slug}`);
+const router = useRouter();
+const { slug } = router.query as { slug: string };
+const [challenge, setChallenge] = useState<any>(null);
 const [flag, setFlag] = useState("");
 const [msg, setMsg] = useState("");
 
+useEffect(() => {
+    if (!slug) return;
+    axios
+    .get(`/api/v1/challenges/${slug}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("access")}` },
+    })
+    .then((r) => setChallenge(r.data))
+    .catch(() => setMsg("Failed to load challenge"));
+}, [slug]);
+
 const submitFlag = async () => {
-    const res = await fetch("/api/v1/solves", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ challenge_slug: slug, flag }),
-    });
-    const result = await res.json();
-    setMsg(result.message);
+    try {
+    const res = await axios.post(
+        "/api/v1/solves/",
+        { slug, flag },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("access")}` } }
+    );
+    setMsg(res.data.message);
+    } catch (e: any) {
+    setMsg(e.response?.data?.detail || "Error submitting flag");
+    }
 };
 
-if (!data) return <p>Loading…</p>;
+if (!challenge) return <p>Loading…</p>;
 
 return (
-    <section className="p-8 text-neonGreen">
-    <h1 className="text-3xl font-greekRune mb-4">{data.title}</h1>
-    <article className="prose prose-invert max-w-none mb-6"
-                dangerouslySetInnerHTML={{ __html: data.description }} />
-    <div className="mb-4">
-        <h2 className="font-greekRune">Hints</h2>
-        <ul className="list-disc ml-6">
-        {data.hints.map((h, i) => (
-            <li key={i} dangerouslySetInnerHTML={{ __html: h }} />
-        ))}
-        </ul>
+    <section className="max-w-3xl mx-auto">
+    <h1 className="text-3xl font-bold text-green-400">{challenge.title}</h1>
+    <p className="mt-4 text-gray-300">{challenge.description}</p>
+
+    <div className="mt-6 p-4 bg-gray-800 rounded">
+        <h2 className="text-xl font-semibold text-green-300 mb-2">Endpoint</h2>
+        <code className="block text-sm text-green-200">{challenge.endpoint}</code>
+        <p className="mt-2 text-sm text-gray-400">
+        Connect to the endpoint using the provided port; each team gets a
+        unique DNS name.
+        </p>
     </div>
 
-    <div className="bg-obsidian p-4 rounded mb-4">
-        <p>Target endpoint (interact from your browser or curl):</p>
-        <code className="block break-all">{data.endpoint}</code>
-    </div>
-
-    <div className="flex gap-2">
+    <div className="mt-6">
         <input
         type="text"
         placeholder="Enter flag"
-        className="flex-1 p-2 rounded bg-gray-800 text-neonGreen"
         value={flag}
         onChange={(e) => setFlag(e.target.value)}
+        className="w-full p-2 rounded bg-gray-700 text-gray-100"
         />
         <button
         onClick={submitFlag}
-        className="px-4 py-2 bg-neonGreen text-obsidian font-bold rounded hover:bg-glitchRed transition"
+        className="mt-2 w-full bg-green-600 hover:bg-green-500 py-2 rounded"
         >
-        Submit
+        Submit Flag
         </button>
     </div>
-    {msg && <p className="mt-2">{msg}</p>}
+
+    {msg && <p className="mt-4 text-green-300">{msg}</p>}
     </section>
 );
 }
+

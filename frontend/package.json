@@ -1,0 +1,55 @@
+  {
+    "name": "medusa-frontend",
+    "version": "1.0.0",
+    "private": true,
+    "description": "MEDUSA – Greek‑mythology themed CTF platform frontend",
+    "scripts": {
+      "dev": "next dev",
+      "build": "next build",
+      "start": "next start",
+      "lint": "next lint",
+      "format": "prettier --write .",
+      "type-check": "tsc --noEmit",
+      "test": "jest",
+      "e2e": "cypress open"
+    },
+    "dependencies": {
+      "next": "13.5.6",
+      "react": "18.2.0",
+      "react-dom": "18.2.0",
+      "axios": "1.7.2",
+      "tailwindcss": "3.4.4",
+      "postcss": "8.4.38",
+      "autoprefixer": "10.4.19",
+      "framer-motion": "11.12.5",
+      "react-toastify": "10.0.5",
+      "clsx": "2.1.1"
+    },
+    "devDependencies": {
+      "@types/node": "20.11.30",
+      "@types/react": "18.2.71",
+      "@types/react-dom": "18.2.23",
+      "typescript": "5.4.5",
+      "eslint": "8.57.0",
+      "eslint-config-next": "13.5.6",
+      "prettier": "3.3.2",
+      "jest": "29.7.0",
+      "ts-jest": "29.2.5",
+      "@testing-library/react": "14.3.1",
+      "@testing-library/jest-dom": "6.4.5",
+      "cypress": "13.13.0"
+    },
+    "engines": {
+      "node": ">=18"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/your-org/medusa.git"
+    },
+    "license": "MIT",
+    "bugs": {
+      "url": "https://github.com/your-org/medusa/issues"
+    },
+    "homepage": "https://github.com/your-org/medusa#readme"
+  }
+
